@@ -1,12 +1,12 @@
-# Summit Portal - Implementation Plan (AEM EDS + Cloudflare Workers)
+# Summit Portal - Implementation Plan (AEM EDS + Adobe I/O Runtime)
 
 ## Overview
 
 This plan implements the Summit Customer Portal using:
 - **Frontend**: AEM Edge Delivery Services (using author-kit patterns)
-- **Backend**: Cloudflare Workers (serverless workers)
-- **Database**: PostgreSQL (via Prisma with connection pooling)
-- **Storage**: Cloudflare R2 (documents)
+- **Backend**: Adobe I/O Runtime (serverless actions)
+- **Database**: PostgreSQL (via Prisma)
+- **Storage**: Azure Blob Storage (documents)
 - **Development Approach**: Content-Driven Development (CDD)
 
 **Timeline**: 8 weeks to Summit launch
@@ -75,17 +75,15 @@ summit-portal/
 │   │   └── api/              # API client (✅ implemented)
 │   └── styles/               # CSS (✅ basic styles)
 │
-└── Backend (Cloudflare Workers)
-    ├── src/
-    │   ├── lib/
-    │   │   ├── db.ts         # ✅ Database connection
-    │   │   ├── jwt.ts        # ✅ JWT handling
-    │   │   └── middleware.ts # ✅ Auth middleware
-    │   ├── routes/
-    │   │   ├── auth.ts       # ⚠️ Needs completion
-    │   │   ├── activities.ts # ✅ Activity tracking
-    │   │   └── mcp.ts        # ✅ MCP integration
-    │   └── index.ts          # Main worker router
+└── Backend (Adobe I/O Runtime)
+    ├── lib/
+    │   ├── db.js             # ✅ Database connection
+    │   ├── jwt.js            # ✅ JWT handling
+    │   └── middleware.js     # ✅ Auth middleware
+    ├── actions/
+    │   ├── auth/callback.js  # ⚠️ Needs completion
+    │   ├── activities/track.js # ✅ Activity tracking
+    │   └── mcp/push-activity.js # ✅ MCP integration
     └── prisma/schema.prisma  # ✅ Database schema
 ```
 
@@ -139,33 +137,33 @@ summit-portal/
 
 #### Task 0.3: Initialize Backend Infrastructure
 - [ ] Provision Azure PostgreSQL database
-- [ ] Run Prisma migrations: `cd workers && npx prisma migrate dev`
-- [ ] Set up Cloudflare R2 Storage container
-- [ ] Configure Cloudflare Workers namespaces (staging/production)
-- [ ] Add all environment variables to Cloudflare Workers
+- [ ] Run Prisma migrations: `cd io-runtime-actions && npx prisma migrate dev`
+- [ ] Set up Azure Blob Storage container
+- [ ] Configure Adobe I/O Runtime namespaces (staging/production)
+- [ ] Add all environment variables to I/O Runtime
 
 ### Phase 1: Authentication & User Data (Week 1, Days 3-5)
 
 **Priority**: Enable end-to-end login flow
 
 #### Task 1.1: Complete Adobe IMS Authentication
-- [ ] Finish [routes/auth/callback.js](workers/routes/auth/callback.js)
+- [ ] Finish [actions/auth/callback.js](io-runtime-actions/actions/auth/callback.js)
   - Complete IMS token exchange
   - Create/update user in database
   - Detect employee status (imsOrgId === ADOBE_ORG_ID)
   - Generate JWT session token
   - Track login activity
-- [ ] Create [routes/auth/refresh.js](workers/routes/auth/refresh.js)
-- [ ] Create [routes/auth/logout.js](workers/routes/auth/logout.js)
+- [ ] Create [actions/auth/refresh.js](io-runtime-actions/actions/auth/refresh.js)
+- [ ] Create [actions/auth/logout.js](io-runtime-actions/actions/auth/logout.js)
 - [ ] Test full auth flow: login → portal → refresh → logout
 
 #### Task 1.2: Build User Management APIs
-- [ ] Create [routes/users/me.js](workers/routes/users/me.js) - GET user profile
-- [ ] Create [routes/users/update-role.js](workers/routes/users/update-role.js) - PATCH role switch
+- [ ] Create [actions/users/me.js](io-runtime-actions/actions/users/me.js) - GET user profile
+- [ ] Create [actions/users/update-role.js](io-runtime-actions/actions/users/update-role.js) - PATCH role switch
 - [ ] Test APIs with Postman/curl
 
 #### Task 1.3: Import Registration Data
-- [ ] Build CLI script: `workers/scripts/import-registration.js`
+- [ ] Build CLI script: `io-runtime-actions/scripts/import-registration.js`
   - Parse CSV/Excel registration file
   - Extract unique email domains → create companies
   - Map registration fields to user roles (configure mapping)
@@ -235,8 +233,8 @@ summit-portal/
    - Handle loading states & errors
 
 4. **Integration**
-   - Add lib/production-agent.js in workers
-   - Create [routes/content/generate.js](workers/routes/content/generate.js) if needed
+   - Add lib/production-agent.js in io-runtime-actions
+   - Create [actions/content/generate.js](io-runtime-actions/actions/content/generate.js) if needed
    - Or call directly from frontend (if API key can be exposed)
 
 #### Task 2.3: Document Card Block
@@ -253,7 +251,7 @@ summit-portal/
    ```
 
 2. **Create Test Content**
-   - Create sample documents in Cloudflare R2
+   - Create sample documents in Azure Blob
    - Create `pages/test/document-card.md`
 
 3. **Implementation**
@@ -282,9 +280,9 @@ summit-portal/
    - Handle empty state
 
 #### Task 2.5: Document APIs (Read)
-- [ ] Create [routes/companies/get-documents.js](workers/routes/companies/get-documents.js)
+- [ ] Create [actions/companies/get-documents.js](io-runtime-actions/actions/companies/get-documents.js)
   - Filter by `visibleToRoles` array
-  - Return document metadata + Cloudflare R2 URLs
+  - Return document metadata + Azure Blob URLs
 - [ ] Test with existing companies
 
 #### Task 2.6: Integrate Portal Header
@@ -319,7 +317,7 @@ summit-portal/
    - Format timestamps relative (e.g., "2 hours ago")
 
 #### Task 3.2: Activity API
-- [ ] Create [routes/users/get-activities.js](workers/routes/users/get-activities.js)
+- [ ] Create [actions/users/get-activities.js](io-runtime-actions/actions/users/get-activities.js)
   - Query user's activities with pagination
   - Order by timestamp DESC
   - Support type filtering
@@ -416,29 +414,29 @@ summit-portal/
    - List pending invitations
 
 #### Task 4.7: Company Management APIs
-- [ ] Create [routes/companies/search.js](workers/routes/companies/search.js)
-- [ ] Create [routes/companies/get.js](workers/routes/companies/get.js)
-- [ ] Create [routes/companies/get-users.js](workers/routes/companies/get-users.js)
-- [ ] Create [routes/companies/get-activities.js](workers/routes/companies/get-activities.js)
+- [ ] Create [actions/companies/search.js](io-runtime-actions/actions/companies/search.js)
+- [ ] Create [actions/companies/get.js](io-runtime-actions/actions/companies/get.js)
+- [ ] Create [actions/companies/get-users.js](io-runtime-actions/actions/companies/get-users.js)
+- [ ] Create [actions/companies/get-activities.js](io-runtime-actions/actions/companies/get-activities.js)
 
 #### Task 4.8: Document Upload APIs
-- [ ] Create [routes/companies/upload-document.js](workers/routes/companies/upload-document.js)
+- [ ] Create [actions/companies/upload-document.js](io-runtime-actions/actions/companies/upload-document.js)
   - Parse multipart/form-data
-  - Upload to Cloudflare R2 Storage
+  - Upload to Azure Blob Storage
   - Create document record
   - Track document_uploaded activity
-- [ ] Create [routes/companies/delete-document.js](workers/routes/companies/delete-document.js)
-  - Delete from Cloudflare R2
+- [ ] Create [actions/companies/delete-document.js](io-runtime-actions/actions/companies/delete-document.js)
+  - Delete from Azure Blob
   - Delete database record
 
 #### Task 4.9: Notes APIs
-- [ ] Create [routes/companies/notes/get.js](workers/routes/companies/notes/get.js)
-- [ ] Create [routes/companies/notes/create.js](workers/routes/companies/notes/create.js)
-- [ ] Create [routes/companies/notes/update.js](workers/routes/companies/notes/update.js)
-- [ ] Create [routes/companies/notes/delete.js](workers/routes/companies/notes/delete.js)
+- [ ] Create [actions/companies/notes/get.js](io-runtime-actions/actions/companies/notes/get.js)
+- [ ] Create [actions/companies/notes/create.js](io-runtime-actions/actions/companies/notes/create.js)
+- [ ] Create [actions/companies/notes/update.js](io-runtime-actions/actions/companies/notes/update.js)
+- [ ] Create [actions/companies/notes/delete.js](io-runtime-actions/actions/companies/notes/delete.js)
 
 #### Task 4.10: Invitation API
-- [ ] Create [routes/users/invite.js](workers/routes/users/invite.js)
+- [ ] Create [actions/users/invite.js](io-runtime-actions/actions/users/invite.js)
   - Create invitation record
   - Send email via email service
   - Handle invitation acceptance flow
@@ -448,20 +446,20 @@ summit-portal/
 **Priority**: Badge scanning at Summit event
 
 #### Task 5.1: MCP Document Endpoint
-- [ ] Create [routes/mcp/push-document.js](workers/routes/mcp/push-document.js)
+- [ ] Create [actions/mcp/push-document.js](io-runtime-actions/actions/mcp/push-document.js)
   - Similar to upload-document
   - Lookup company by domain
   - Authenticate via API key
 
 #### Task 5.2: Rate Limiting
-- [ ] Complete [lib/rate-limit.js](workers/lib/rate-limit.js)
+- [ ] Complete [lib/rate-limit.js](io-runtime-actions/lib/rate-limit.js)
   - Implement token bucket algorithm
   - 100 req/min, 10k req/day per API key
   - Store state in database (ApiKey table)
   - Return 429 with Retry-After header
 
 #### Task 5.3: API Key Management
-- [ ] Create CLI tool: `workers/scripts/manage-api-keys.js`
+- [ ] Create CLI tool: `io-runtime-actions/scripts/manage-api-keys.js`
   - Generate API keys
   - Hash and store in database
   - Set permissions & rate limits
@@ -554,7 +552,7 @@ summit-portal/
 
 #### Task 8.4: Production Deployment
 - [ ] Deploy frontend to aem.live production
-- [ ] Deploy Cloudflare Workers actions to production namespace
+- [ ] Deploy I/O Runtime actions to production namespace
 - [ ] Run smoke tests
 - [ ] Load test: simulate 3000 concurrent users
 - [ ] Monitor for 24 hours
@@ -573,7 +571,7 @@ summit-portal/
 - [ ] Adobe IMS credentials (client ID/secret)
 - [ ] Adobe IMS Org ID for employee detection
 - [ ] PostgreSQL database provisioned
-- [ ] Cloudflare R2 Storage account created
+- [ ] Azure Blob Storage account created
 - [ ] Production Agent API access
 - [ ] Email service credentials (SendGrid, etc.)
 - [ ] Google Drive or SharePoint content source
@@ -585,8 +583,8 @@ summit-portal/
 - [ ] Test company accounts for development
 
 ### Infrastructure
-- [ ] Cloudflare Workers staging namespace
-- [ ] Cloudflare Workers production namespace
+- [ ] Adobe I/O Runtime staging namespace
+- [ ] Adobe I/O Runtime production namespace
 - [ ] AEM EDS project created (aem.live)
 - [ ] CI/CD pipeline for actions deployment
 
@@ -610,7 +608,7 @@ summit-portal/
 
 4. **Scale Testing**
    - **Risk**: 3000 concurrent users, 2000 companies
-   - **Mitigation**: Load test in Week 7, tune database connection pools, enable Cloudflare Workers autoscaling
+   - **Mitigation**: Load test in Week 7, tune database connection pools, enable I/O Runtime autoscaling
 
 5. **Mobile Experience**
    - **Risk**: Attendees primarily on phones, poor mobile UX = failure
@@ -634,10 +632,10 @@ npm run lint
 npm run lint:fix
 ```
 
-### Backend (Cloudflare Workers)
+### Backend (Adobe I/O Runtime)
 
 ```bash
-cd workers
+cd io-runtime-actions
 
 # Install dependencies
 npm install
@@ -648,20 +646,8 @@ npx prisma migrate dev
 # Generate Prisma client
 npx prisma generate
 
-# Start local development server
-npm run dev
-# or
-npx wrangler dev
-
-# Deploy to production
-npm run deploy
-# or
-npx wrangler deploy
-
-# Manage secrets (production)
-npx wrangler secret put DATABASE_URL
-npx wrangler secret put IMS_CLIENT_SECRET
-npx wrangler secret put JWT_SECRET
+# Deploy actions
+aio app deploy
 
 # Run import script
 node scripts/import-registration.js path/to/registration.csv
@@ -670,9 +656,6 @@ node scripts/import-registration.js path/to/registration.csv
 node scripts/manage-api-keys.js create "Badge Scanner System"
 node scripts/manage-api-keys.js list
 node scripts/manage-api-keys.js revoke <key-id>
-
-# Tail logs
-npx wrangler tail
 ```
 
 ### Testing

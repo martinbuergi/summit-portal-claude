@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.aem.live)",
+      "Bash(gh extension install:*)",
+      "Bash(gh upskill:*)",
+      "Bash(./.agents/discover-skills)",
+      "Bash(test:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit: Summit Portal implementation scaffold\n\n- Added comprehensive implementation plan and specifications\n- Installed AEM Edge Delivery Services development skills\n- Set up project structure \\(blocks, scripts, styles\\)\n- Implemented auth modules \\(IMS, session, guard\\)\n- Implemented activity tracking \\(tracker, queue\\)\n- Implemented API client for I/O Runtime\n- Configured backend infrastructure \\(Prisma schema, middleware\\)\n- Added sample login-button block\n- Configured content source \\(fstab.yaml\\)\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(gh repo create:*)",
+      "Bash(git push:*)"
+    ]
+  }
+}

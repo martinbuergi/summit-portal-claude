@@ -6,7 +6,7 @@ Build a personalized customer portal for Adobe Summit using AEM.now (Edge Delive
 
 **Timeline:** 8 weeks to Summit launch
 **Scale:** ~2,000 companies, ~3,000 users
-**Platform:** Pure AEM.now (Edge Delivery Services) + Cloudflare Workers for APIs
+**Platform:** Pure AEM.now (Edge Delivery Services) + Adobe I/O Runtime for APIs
 
 ---
 
@@ -23,10 +23,10 @@ Build a personalized customer portal for Adobe Summit using AEM.now (Edge Delive
            │                   │                         │
            ▼                   ▼                         ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                      Cloudflare Workers (Serverless APIs)               │
+│                      Adobe I/O Runtime (Serverless APIs)                │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
 │  │  Auth    │  │ Company  │  │ Activity │  │ Document │  │   MCP    │  │
-│  │  Worker  │  │  Worker  │  │  Worker  │  │  Worker  │  │  Worker  │  │
+│  │  Action  │  │  Action  │  │  Action  │  │  Action  │  │  Action  │  │
 │  └──────────┘  └──────────┘  └──────────┘  └──────────┘  └──────────┘  │
 └─────────────────────────────────────────────────────────────────────────┘
            │                   │                         │
@@ -34,7 +34,7 @@ Build a personalized customer portal for Adobe Summit using AEM.now (Edge Delive
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                           Data Layer                                    │
 │  ┌────────────────┐  ┌────────────────┐  ┌────────────────────────────┐ │
-│  │  PostgreSQL    │  │  Cloudflare R2 │  │   Production Agent         │ │
+│  │  PostgreSQL    │  │  Azure Blob    │  │   Production Agent         │ │
 │  │  (Users, etc.) │  │  (Documents)   │  │   (Content Personalization)│ │
 │  └────────────────┘  └────────────────┘  └────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -154,7 +154,7 @@ interface Document {
   companyId: string;
   title: string;
   description: string | null;
-  fileUrl: string;               // Cloudflare R2 Storage URL
+  fileUrl: string;               // Azure Blob Storage URL
   fileType: string;              // 'pdf', 'pptx', etc.
   fileSizeBytes: number;
   uploadedById: string;          // Employee user ID
@@ -219,17 +219,12 @@ interface RoleMappingConfig {
 
 ---
 
-## API Specifications (Cloudflare Workers)
+## API Specifications (Adobe I/O Runtime Actions)
 
 ### Base URL
 
 ```
-https://api.summit-portal.workers.dev/
-```
-
-Alternative with custom domain:
-```
-https://api.summit-portal.com/
+https://runtime.adobe.io/api/v1/web/summit-portal/
 ```
 
 ### Common Response Formats
@@ -826,7 +821,7 @@ summit-portal/
 │   │   └── guard.js              # Route protection
 │   │
 │   ├── api/
-│   │   └── client.js             # API client for Cloudflare Workers
+│   │   └── client.js             # API client for I/O Runtime actions
 │   │
 │   ├── tracking/
 │   │   ├── tracker.js            # Click/view tracking
@@ -914,47 +909,58 @@ summit-portal/
         └── config.json           # Sidekick configuration
 ```
 
-### Cloudflare Workers
+### Adobe I/O Runtime Actions
 
 ```
-workers/
+io-runtime-actions/
 ├── package.json
-├── wrangler.toml                 # Cloudflare Workers configuration
-├── .dev.vars.example             # Local development variables
+├── .env.example
 │
-├── src/
-│   ├── index.ts                  # Main worker entry point (router)
+├── lib/
+│   ├── db.js                     # PostgreSQL connection (Prisma)
+│   ├── ims.js                    # IMS token validation
+│   ├── storage.js                # Azure Blob Storage
+│   ├── jwt.js                    # Session token handling
+│   ├── middleware.js             # Auth middleware
+│   └── rate-limit.js             # Rate limiting for MCP
+│
+├── actions/
+│   ├── auth/
+│   │   ├── callback.js
+│   │   ├── refresh.js
+│   │   └── logout.js
 │   │
-│   ├── lib/
-│   │   ├── db.ts                 # PostgreSQL connection (Prisma)
-│   │   ├── ims.ts                # IMS token validation
-│   │   ├── storage.ts            # Cloudflare R2 Storage
-│   │   ├── jwt.ts                # Session token handling
-│   │   ├── middleware.ts         # Auth middleware
-│   │   ├── cors.ts               # CORS handling
-│   │   └── rate-limit.ts         # Rate limiting for MCP (Durable Objects)
+│   ├── users/
+│   │   ├── me.js
+│   │   ├── update-role.js
+│   │   └── invite.js
 │   │
-│   ├── routes/
-│   │   ├── auth.ts               # Auth endpoints (callback, refresh, logout)
-│   │   ├── users.ts              # User endpoints (me, update-role, invite)
-│   │   ├── companies.ts          # Company endpoints
-│   │   ├── documents.ts          # Document endpoints
-│   │   ├── activities.ts         # Activity endpoints
-│   │   ├── notes.ts              # Notes endpoints
-│   │   └── mcp.ts                # MCP integration endpoints
+│   ├── companies/
+│   │   ├── get.js
+│   │   ├── get-users.js
+│   │   ├── search.js
+│   │   ├── get-documents.js
+│   │   ├── upload-document.js
+│   │   ├── delete-document.js
+│   │   ├── get-activities.js
+│   │   ├── get-notes.js
+│   │   ├── create-note.js
+│   │   ├── update-note.js
+│   │   └── delete-note.js
 │   │
-│   ├── types/
-│   │   └── index.ts              # TypeScript type definitions
+│   ├── activities/
+│   │   ├── track.js
+│   │   └── get-mine.js
 │   │
-│   └── utils/
-│       ├── response.ts           # Response helpers
-│       └── validation.ts         # Request validation
+│   └── mcp/
+│       ├── push-activity.js
+│       └── push-document.js
 │
 ├── prisma/
 │   └── schema.prisma
 │
 └── tests/
-    ├── routes/
+    ├── actions/
     └── lib/
 ```
 
@@ -1112,17 +1118,16 @@ model Session {
   - Set up local development environment
   - Deploy to EDS staging
 
-- [ ] **Task 1.2**: Set up Cloudflare Workers
-  - Create Cloudflare account and Workers project
-  - Configure wrangler.toml for routing
-  - Set up staging/production environments
-  - Configure custom domain (optional)
+- [ ] **Task 1.2**: Set up Adobe I/O Runtime
+  - Create I/O Runtime project
+  - Configure deployment pipeline
+  - Set up staging/production namespaces
 
 - [ ] **Task 1.3**: Set up PostgreSQL database
-  - Provision database (Neon, Supabase, or PlanetScale recommended for serverless)
+  - Provision database (Azure PostgreSQL recommended)
   - Initialize Prisma schema
   - Run migrations
-  - Configure connection pooling (for Cloudflare Workers compatibility)
+  - Set up connection pooling
 
 - [ ] **Task 1.4**: Implement Adobe IMS authentication
   - Configure IMS client credentials
@@ -1168,10 +1173,10 @@ model Session {
   - Add role-based document filtering
 
 - [ ] **Task 2.4**: Build document upload (employee)
-  - Set up Cloudflare R2 Storage
+  - Set up Azure Blob Storage
   - Build `document-uploader` block
-  - Implement `POST /companies/:id/documents` worker
-  - Implement `DELETE /companies/:id/documents/:id` worker
+  - Implement `POST /companies/:id/documents` action
+  - Implement `DELETE /companies/:id/documents/:id` action
 
 ### Phase 3: Activity Tracking (Week 5-6)
 
@@ -1188,9 +1193,9 @@ model Session {
   - Implement pagination
 
 - [ ] **Task 3.3**: Implement MCP integration
-  - Create `POST /mcp/activities` worker
-  - Create `POST /mcp/documents` worker
-  - Build rate limiting with Durable Objects
+  - Create `POST /mcp/activities` action
+  - Create `POST /mcp/documents` action
+  - Build rate limiting middleware
   - Add API key management
   - Build company/user lookup by domain/email
 
@@ -1269,7 +1274,7 @@ model Session {
 ```javascript
 // scripts/config.js
 export default {
-  API_BASE_URL: 'https://api.summit-portal.workers.dev',
+  API_BASE_URL: 'https://runtime.adobe.io/api/v1/web/summit-portal',
   IMS_CLIENT_ID: 'your-ims-client-id',
   IMS_SCOPE: 'openid,AdobeID,read_organizations',
   IMS_AUTH_URL: 'https://ims-na1.adobelogin.com/ims/authorize/v2',
@@ -1277,11 +1282,10 @@ export default {
 };
 ```
 
-### Cloudflare Workers
+### Adobe I/O Runtime
 
 ```bash
-# .dev.vars (local development)
-# Add these as secrets in Cloudflare dashboard for production
+# .env
 
 # Database
 DATABASE_URL="postgresql://user:password@host:5432/summit_portal"
@@ -1296,11 +1300,9 @@ ADOBE_ORG_ID="adobe-ims-org-id"
 PRODUCTION_AGENT_API_URL="https://experience.adobe.com/api/production-agent"
 PRODUCTION_AGENT_API_KEY="your-api-key"
 
-# Cloudflare R2 Storage
-R2_ACCESS_KEY_ID="your-r2-access-key-id"
-R2_SECRET_ACCESS_KEY="your-r2-secret-access-key"
-R2_BUCKET_NAME="summit-portal-documents"
-R2_ACCOUNT_ID="your-cloudflare-account-id"
+# Azure Blob Storage
+AZURE_STORAGE_CONNECTION_STRING="..."
+AZURE_STORAGE_CONTAINER="summit-portal-documents"
 
 # Session
 JWT_SECRET="your-jwt-secret"
@@ -1309,28 +1311,6 @@ SESSION_EXPIRY_HOURS=24
 # MCP
 MCP_RATE_LIMIT_PER_MINUTE=100
 MCP_RATE_LIMIT_PER_DAY=10000
-```
-
-### Cloudflare Bindings (wrangler.toml)
-
-```toml
-name = "summit-portal-api"
-main = "src/index.ts"
-compatibility_date = "2024-01-01"
-
-# R2 Bucket Binding
-[[r2_buckets]]
-binding = "DOCUMENTS"
-bucket_name = "summit-portal-documents"
-
-# Durable Objects (for rate limiting)
-[[durable_objects.bindings]]
-name = "RATE_LIMITER"
-class_name = "RateLimiter"
-
-# Environment Variables (non-secret)
-[vars]
-ENVIRONMENT = "production"
 ```
 
 ---
@@ -1545,7 +1525,7 @@ ENVIRONMENT = "production"
 
 1. **Pure AEM.now**: All frontend code lives in EDS blocks/scripts. No React/Next.js. Use vanilla JavaScript modules.
 
-2. **Cloudflare Workers**: All API logic runs as serverless workers. Stateless. Use Prisma for database access with connection pooling (via Prisma Accelerate or direct).
+2. **Adobe I/O Runtime**: All API logic runs as serverless actions. Stateless. Use Prisma for database access.
 
 3. **Employee Detection**: Compare `user.imsOrgId === ADOBE_ORG_ID` constant. Set during auth callback.
 
