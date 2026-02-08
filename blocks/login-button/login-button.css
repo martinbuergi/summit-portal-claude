@@ -1,0 +1,62 @@
+/**
+ * Login Button Block Styles
+ */
+
+.login-button {
+  display: flex;
+  align-items: center;
+}
+
+.login-button .login-btn {
+  gap: var(--spacing-2);
+}
+
+.login-button .login-btn svg {
+  flex-shrink: 0;
+}
+
+.login-button .user-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+
+.login-button .user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  color: var(--color-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.login-button .user-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.login-button .user-name {
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+}
+
+.login-button .user-role {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.login-button .logout-btn {
+  margin-left: var(--spacing-2);
+  padding: var(--spacing-1) var(--spacing-2);
+  font-size: var(--font-size-sm);
+}
+
+@media (max-width: 768px) {
+  .login-button .user-details {
+    display: none;
+  }
+}

@@ -1,0 +1,6 @@
+mountpoints:
+  /: https://drive.google.com/drive/folders/YOUR_FOLDER_ID
+
+# Alternative: SharePoint
+# mountpoints:
+#   /: https://your-tenant.sharepoint.com/sites/summit-portal/Shared%20Documents

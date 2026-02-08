@@ -1,0 +1,136 @@
+// Summit Customer Portal - Database Schema
+// Run: npx prisma migrate dev
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String    @id @default(uuid())
+  imsId           String    @unique
+  imsOrgId        String                          // For employee detection
+  email           String    @unique
+  firstName       String
+  lastName        String
+  jobTitle        String?
+  country         String?
+  region          String?
+  role            String                          // 'executive' | 'technical' | 'practitioner'
+  selectedRole    String?
+  companyId       String
+  company         Company   @relation(fields: [companyId], references: [id])
+  activities      Activity[]
+  documents       Document[] @relation("UploadedDocuments")
+  notes           Note[]
+  invitationsSent Invitation[] @relation("InvitationsSent")
+  createdAt       DateTime  @default(now())
+  lastLoginAt     DateTime?
+
+  @@index([imsOrgId])
+  @@index([companyId])
+}
+
+model Company {
+  id          String    @id @default(uuid())
+  name        String
+  domain      String    @unique
+  industry    String
+  portalSlug  String    @unique
+  users       User[]
+  activities  Activity[]
+  documents   Document[]
+  notes       Note[]
+  invitations Invitation[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Activity {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  type      String
+  metadata  Json
+  source    String   @default("portal")           // 'portal' | 'mcp' | 'system'
+  timestamp DateTime @default(now())
+
+  @@index([companyId, timestamp(sort: Desc)])
+  @@index([userId, timestamp(sort: Desc)])
+  @@index([type])
+}
+
+model Document {
+  id             String   @id @default(uuid())
+  companyId      String
+  company        Company  @relation(fields: [companyId], references: [id])
+  title          String
+  description    String?
+  fileUrl        String
+  fileType       String
+  fileSizeBytes  Int
+  visibleToRoles String[]
+  uploadedById   String
+  uploadedBy     User     @relation("UploadedDocuments", fields: [uploadedById], references: [id])
+  uploadedAt     DateTime @default(now())
+
+  @@index([companyId])
+}
+
+model Note {
+  id          String   @id @default(uuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+  content     String
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+model Invitation {
+  id           String   @id @default(uuid())
+  companyId    String
+  company      Company  @relation(fields: [companyId], references: [id])
+  invitedEmail String
+  invitedById  String
+  invitedBy    User     @relation("InvitationsSent", fields: [invitedById], references: [id])
+  status       String   @default("pending")       // 'pending' | 'accepted' | 'expired'
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+
+  @@unique([companyId, invitedEmail])
+  @@index([status])
+}
+
+model ApiKey {
+  id          String   @id @default(uuid())
+  key         String   @unique                    // Hashed API key
+  name        String                              // Descriptive name
+  permissions String[]                            // ['mcp:activities', 'mcp:documents']
+  rateLimit   Int      @default(100)              // Requests per minute
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  lastUsedAt  DateTime?
+
+  @@index([key])
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique                      // Hashed session token
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([expiresAt])
+}

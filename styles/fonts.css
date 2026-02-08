@@ -1,0 +1,23 @@
+/**
+ * Font Definitions
+ *
+ * Adobe Clean is Adobe's brand font.
+ * Falls back to system fonts if not available.
+ */
+
+/* Adobe Clean - load from Adobe Fonts if available */
+@font-face {
+  font-family: 'Adobe Clean';
+  src: url('https://use.typekit.net/af/cb695f/000000000000000000017701/27/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n4&v=3') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Adobe Clean';
+  src: url('https://use.typekit.net/af/eaf09c/000000000000000000017703/27/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n7&v=3') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
